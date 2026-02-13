@@ -5,74 +5,78 @@
 <title>Braille Transcriber Global</title>
 
 <style>
-body{
-  font-family:Segoe UI,system-ui;
-  background:#f1f5f9;
-  padding:40px;
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  font-family: Segoe UI, system-ui;
 }
-.container{
+
+/* Card do Braille */
+.braille-card{
   max-width:700px;
   margin:auto;
   background:#fff;
-  border:2px solid #0f172a;
   border-radius:12px;
   overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+  border:1px solid #e5e7eb;
 }
-.header{
+
+.braille-header{
   background:#0f172a;
   color:#fff;
-  padding:15px 20px;
+  padding:14px 18px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
+  font-weight:600;
 }
-.body{
-  padding:25px;
+
+.braille-body{
+  padding:22px;
 }
+
 select,input,button{
   width:100%;
   padding:12px;
   margin-bottom:15px;
   border-radius:6px;
-  border:1px solid #ccc;
+  border:1px solid #cbd5e1;
+  font-size:14px;
 }
+
 button{
   background:#c5a059;
-  font-weight:bold;
+  border:none;
+  font-weight:700;
   cursor:pointer;
 }
+
 .notice{
   background:#f8fafc;
   padding:12px;
   border-radius:6px;
   font-size:13px;
   margin-bottom:15px;
-}
-
-/* Modo embed para Blogger */
-html, body {
-  margin: 0;
-  padding: 0;
-}
-body.embed {
-  background: transparent !important;
-  padding: 0 !important;
+  line-height:1.4;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-  <div class="header">
-    <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
-    <div>v2.2</div>
+<div class="braille-card">
+  <div class="braille-header">
+    <div>⠃⠗⠇ Braille Transcriber Global</div>
+    <div style="opacity:.7;font-size:12px">v2.3</div>
   </div>
 
-  <div class="body">
+  <div class="braille-body">
     <div class="notice" id="noticeBox"></div>
 
     <label id="labelUrl"></label>
-    <input type="text" id="urlInput" />
+    <input type="text" id="urlInput"/>
 
     <label id="labelLang"></label>
     <select id="lang">
@@ -84,16 +88,11 @@ body.embed {
       <option value="it">Italiano</option>
     </select>
 
-    <button id="generateBtn" onclick="generate()"></button>
+    <button id="generateBtn">Gerar arquivo Braille</button>
   </div>
 </div>
 
-<script>
-const params = new URLSearchParams(window.location.search);
-if (params.get("embed") === "1") {
-  document.body.classList.add("embed");
-}
-</script>
+<script src="https://unpkg.com/liblouis@0.4.0/dist/liblouis.min.js"></script>
 
 <script>
 const translations = {
@@ -117,7 +116,7 @@ This generator produces normative Braille using official tables.
 Intended for printing on compatible Braille embossers.
 Does not support advanced mathematical or scientific notation.`,
 labelUrl:"Post URL:",
-placeholder:"Paste the URL of your Blogger post here",
+placeholder:"Paste your Blogger post URL here",
 labelLang:"Content language:",
 button:"Generate Braille file",
 alertUrl:"Please enter the post URL.",
@@ -184,91 +183,69 @@ filename:"documento_braille.brf"
 };
 
 function updateLanguage(){
-  const lang=document.getElementById("lang").value;
-  const t=translations[lang];
-  noticeBox.innerHTML=t.notice;
-  labelUrl.innerText=t.labelUrl;
-  urlInput.placeholder=t.placeholder;
-  labelLang.innerText=t.labelLang;
-  generateBtn.innerText=t.button;
+  const lang = document.getElementById("lang").value;
+  const t = translations[lang];
+  noticeBox.innerHTML = t.notice;
+  labelUrl.innerText = t.labelUrl;
+  urlInput.placeholder = t.placeholder;
+  labelLang.innerText = t.labelLang;
+  generateBtn.innerText = t.button;
 }
-lang.addEventListener("change",updateLanguage);
+
+lang.addEventListener("change", updateLanguage);
 updateLanguage();
 
-async function generate(){
-  const lang=document.getElementById("lang").value;
-  const t=translations[lang];
-  const url=urlInput.value.trim();
-
-  if(!url){ alert(t.alertUrl); return; }
-
-  if(!window.liblouis || !window.liblouis.translateString){
-    alert(t.alertEngine);
-    return;
+window.addEventListener("load", async () => {
+  try{
+    await liblouis.loadTable("en-ueb-g2.ctb");
+    await liblouis.loadTable("pt-br.dis");
+    await liblouis.loadTable("es.ctb");
+    await liblouis.loadTable("fr-g2.ctb");
+    await liblouis.loadTable("de-g2.ctb");
+    await liblouis.loadTable("it.ctb");
+  }catch(e){
+    console.warn("Falha ao carregar tabelas Braille:", e);
   }
+});
+
+generateBtn.onclick = async function(){
+  const lang = document.getElementById("lang").value;
+  const t = translations[lang];
+  const url = urlInput.value.trim();
+
+  if(!url) return alert(t.alertUrl);
+  if(!window.liblouis || !liblouis.translateString) return alert(t.alertEngine);
 
   try{
     const proxy="https://api.allorigins.win/raw?url=";
-    const response=await fetch(proxy+encodeURIComponent(url));
-    const html=await response.text();
+    const res = await fetch(proxy + encodeURIComponent(url));
+    const html = await res.text();
 
-    const parser=new DOMParser();
-    const doc=parser.parseFromString(html,"text/html");
-
+    const doc = new DOMParser().parseFromString(html,"text/html");
     const contentNode =
       doc.querySelector(".post-body") ||
-      doc.querySelector(".post-body-container") ||
-      doc.querySelector(".post-body.entry-content") ||
-      doc.querySelector("article");
+      doc.querySelector("article") ||
+      doc.body;
 
-    let content = contentNode ? contentNode.innerText : doc.body.innerText;
+    const content = contentNode.innerText.trim();
+    const tables = { pt:"pt-br.dis", en:"en-ueb-g2.ctb", es:"es.ctb", fr:"fr-g2.ctb", de:"de-g2.ctb", it:"it.ctb" };
 
-    content = content
-      .replace(/Compartilhar|Share|Comentários|Comments/gi, "")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    const braille = await liblouis.translateString(tables[lang], content);
 
-    const tables={
-      pt:"pt-br.dis",
-      en:"en-ueb-g2.ctb",
-      es:"es.ctb",
-      fr:"fr-g2.ctb",
-      de:"de-g2.ctb",
-      it:"it.ctb"
-    };
-
-    const braille = await window.liblouis.translateString(tables[lang], content);
-
-    const blob=new Blob([braille],{type:"text/plain;charset=utf-8"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=t.filename;
+    const blob = new Blob([braille],{type:"text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = t.filename;
     a.click();
-
   }catch(e){
     console.error(e);
     alert(t.alertError);
   }
-}
+};
 
+// Recebe URL automática
 const postUrl = new URLSearchParams(window.location.search).get("url");
-if (postUrl) {
-  document.getElementById("urlInput").value = decodeURIComponent(postUrl);
-}
-</script>
-
-<script src="https://unpkg.com/liblouis@0.4.0/dist/liblouis.min.js"></script>
-<script>
-window.addEventListener("load", async () => {
-  if (window.liblouis && window.liblouis.loadTable) {
-    await window.liblouis.loadTable("en-ueb-g2.ctb");
-    await window.liblouis.loadTable("pt-br.dis");
-    await window.liblouis.loadTable("es.ctb");
-    await window.liblouis.loadTable("fr-g2.ctb");
-    await window.liblouis.loadTable("de-g2.ctb");
-    await window.liblouis.loadTable("it.ctb");
-  }
-});
+if(postUrl) urlInput.value = decodeURIComponent(postUrl);
 </script>
 
 </body>
