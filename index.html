@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Braille Transcriber Global</title>
+<style>
+body{
+  font-family:Segoe UI,system-ui;
+  background:#f1f5f9;
+  padding:40px;
+}
+.container{
+  max-width:700px;
+  margin:auto;
+  background:#fff;
+  border:2px solid #0f172a;
+  border-radius:12px;
+  overflow:hidden;
+}
+.header{
+  background:#0f172a;
+  color:#fff;
+  padding:15px 20px;
+  display:flex;
+  justify-content:space-between;
+}
+.body{
+  padding:25px;
+}
+select,input,button{
+  width:100%;
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+button{
+  background:#c5a059;
+  font-weight:bold;
+  cursor:pointer;
+}
+.notice{
+  background:#f8fafc;
+  padding:12px;
+  border-radius:6px;
+  font-size:13px;
+  margin-bottom:15px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<div class="header">
+  <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
+  <div>v1.0</div>
+</div>
+
+<div class="body">
+
+<div class="notice">
+<strong>Aviso Importante:</strong><br>
+Este gerador produz Braille textual padrão internacional (Unicode).  
+Indicado para impressão em embossers compatíveis.  
+Não contempla notação matemática ou científica avançada.
+</div>
+
+<label>URL da Postagem:</label>
+<input type="text" id="urlInput" placeholder="Cole aqui a URL do seu post do Blogger">
+
+<label>Idioma do Conteúdo:</label>
+<select id="lang">
+<option value="pt">Português</option>
+<option value="en">English</option>
+<option value="es">Español</option>
+<option value="fr">Français</option>
+<option value="de">Deutsch</option>
+<option value="it">Italiano</option>
+</select>
+
+<button onclick="generate()">Gerar Arquivo Braille</button>
+
+</div>
+</div>
+
+<script>
+
+const brailleMap = {
+a:"⠁",b:"⠃",c:"⠉",d:"⠙",e:"⠑",f:"⠋",g:"⠛",h:"⠓",i:"⠊",j:"⠚",
+k:"⠅",l:"⠇",m:"⠍",n:"⠝",o:"⠕",p:"⠏",q:"⠟",r:"⠗",s:"⠎",t:"⠞",
+u:"⠥",v:"⠧",w:"⠺",x:"⠭",y:"⠽",z:"⠵"," ":"⠀","\n":"\n"
+};
+
+async function generate(){
+  const url = document.getElementById("urlInput").value.trim();
+  if(!url){
+    alert("Informe a URL do post.");
+    return;
+  }
+
+  try{
+    const proxy = "https://api.allorigins.win/raw?url=";
+    const response = await fetch(proxy + encodeURIComponent(url));
+    const html = await response.text();
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html,"text/html");
+
+    const content = doc.querySelector("article")?.innerText ||
+                    doc.querySelector(".post-body")?.innerText ||
+                    doc.body.innerText;
+
+    const text = content.toLowerCase();
+
+    let result="";
+    for(let c of text){
+      result += brailleMap[c] || "";
+    }
+
+    const blob = new Blob([result],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="documento_braille.brf";
+    a.click();
+
+  }catch(e){
+    alert("Erro ao acessar a postagem.");
+  }
+}
+
+</script>
+
+</body>
+</html>
