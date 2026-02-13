@@ -53,42 +53,38 @@ button{
 <body>
 
 <div class="container">
-<div class="header">
-  <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
-  <div>v2.0</div>
-</div>
+  <div class="header">
+    <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
+    <div>v2.1</div>
+  </div>
 
-<div class="body">
+  <div class="body">
 
-<div class="notice" id="noticeBox"></div>
+    <div class="notice" id="noticeBox"></div>
 
-<label id="labelUrl"></label>
-<input type="text" id="urlInput">
+    <label id="labelUrl"></label>
+    <input type="text" id="urlInput">
 
-<label id="labelLang"></label>
-<select id="lang">
-<option value="pt">Português</option>
-<option value="en">English</option>
-<option value="es">Español</option>
-<option value="fr">Français</option>
-<option value="de">Deutsch</option>
-<option value="it">Italiano</option>
-</select>
+    <label id="labelLang"></label>
+    <select id="lang">
+      <option value="pt">Português</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="fr">Français</option>
+      <option value="de">Deutsch</option>
+      <option value="it">Italiano</option>
+    </select>
 
-<button id="generateBtn" onclick="generate()"></button>
+    <button id="generateBtn" onclick="generate()"></button>
 
-</div>
+  </div>
 </div>
 
 <script>
-/* =========================
-   TRADUÇÕES PROFISSIONAIS
-========================= */
-
 const translations = {
 pt:{
 notice:`<strong>Aviso Importante:</strong><br>
-Este gerador produz Braille textual normativo (tabelas oficiais).
+Este gerador produz Braille normativo (tabelas oficiais).
 Destina-se à impressão em embossers compatíveis.
 Não contempla notação matemática ou científica avançada.`,
 labelUrl:"URL da postagem:",
@@ -97,6 +93,7 @@ labelLang:"Idioma do conteúdo:",
 button:"Gerar arquivo Braille",
 alertUrl:"Por favor, informe a URL da postagem.",
 alertError:"Não foi possível acessar o conteúdo da postagem.",
+alertEngine:"Motor Braille não carregado no navegador atual.",
 filename:"documento_braille.brf"
 },
 en:{
@@ -110,6 +107,7 @@ labelLang:"Content language:",
 button:"Generate Braille file",
 alertUrl:"Please enter the post URL.",
 alertError:"Unable to access the post content.",
+alertEngine:"Braille engine could not be loaded in this browser.",
 filename:"braille_document.brf"
 },
 es:{
@@ -123,6 +121,7 @@ labelLang:"Idioma del contenido:",
 button:"Generar archivo Braille",
 alertUrl:"Por favor, introduzca la URL de la publicación.",
 alertError:"No se pudo acceder al contenido de la publicación.",
+alertEngine:"El motor Braille no se cargó en este navegador.",
 filename:"documento_braille.brf"
 },
 fr:{
@@ -136,6 +135,7 @@ labelLang:"Langue du contenu :",
 button:"Générer le fichier Braille",
 alertUrl:"Veuillez saisir l’URL de l’article.",
 alertError:"Impossible d’accéder au contenu de l’article.",
+alertEngine:"Le moteur Braille n’a pas pu être chargé.",
 filename:"document_braille.brf"
 },
 de:{
@@ -149,6 +149,7 @@ labelLang:"Inhaltssprache:",
 button:"Braille-Datei erstellen",
 alertUrl:"Bitte geben Sie die Beitrags-URL ein.",
 alertError:"Der Inhalt des Beitrags konnte nicht abgerufen werden.",
+alertEngine:"Die Braille-Engine konnte nicht geladen werden.",
 filename:"braille_dokument.brf"
 },
 it:{
@@ -162,38 +163,35 @@ labelLang:"Lingua del contenuto:",
 button:"Genera file Braille",
 alertUrl:"Inserisci l’URL del post.",
 alertError:"Impossibile accedere al contenuto del post.",
+alertEngine:"Il motore Braille non è stato caricato.",
 filename:"documento_braille.brf"
 }
 };
 
-/* =========================
-   TROCA DE IDIOMA
-========================= */
-
 function updateLanguage(){
   const lang=document.getElementById("lang").value;
   const t=translations[lang];
-  document.getElementById("noticeBox").innerHTML=t.notice;
-  document.getElementById("labelUrl").innerText=t.labelUrl;
-  document.getElementById("urlInput").placeholder=t.placeholder;
-  document.getElementById("labelLang").innerText=t.labelLang;
-  document.getElementById("generateBtn").innerText=t.button;
+  noticeBox.innerHTML=t.notice;
+  labelUrl.innerText=t.labelUrl;
+  urlInput.placeholder=t.placeholder;
+  labelLang.innerText=t.labelLang;
+  generateBtn.innerText=t.button;
 }
-
-document.getElementById("lang").addEventListener("change",updateLanguage);
+lang.addEventListener("change",updateLanguage);
 updateLanguage();
-
-/* =========================
-   GERAÇÃO BRAILLE NORMATIVA
-========================= */
 
 async function generate(){
   const lang=document.getElementById("lang").value;
   const t=translations[lang];
-  const url=document.getElementById("urlInput").value.trim();
+  const url=urlInput.value.trim();
 
   if(!url){
     alert(t.alertUrl);
+    return;
+  }
+
+  if(!window.liblouis || !window.liblouis.translateString){
+    alert(t.alertEngine);
     return;
   }
 
@@ -205,14 +203,18 @@ async function generate(){
     const parser=new DOMParser();
     const doc=parser.parseFromString(html,"text/html");
 
-    const content=doc.querySelector("article")?.innerText ||
-                  doc.querySelector(".post-body")?.innerText ||
-                  doc.body.innerText;
+    const contentNode =
+      doc.querySelector(".post-body") ||
+      doc.querySelector(".post-body-container") ||
+      doc.querySelector(".post-body.entry-content") ||
+      doc.querySelector("article");
 
-    if(!window.liblouis){
-      alert("Motor Braille não carregado.");
-      return;
-    }
+    let content = contentNode ? contentNode.innerText : doc.body.innerText;
+
+    content = content
+      .replace(/Compartilhar|Share|Comentários|Comments/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
     const tables={
       pt:"pt-br.dis",
@@ -223,8 +225,8 @@ async function generate(){
       it:"it.ctb"
     };
 
-    const table=tables[lang]||"en-ueb-g2.ctb";
-    const braille=await window.liblouis.translateString(table, content);
+    const table=tables[lang] || "en-ueb-g2.ctb";
+    const braille = await window.liblouis.translateString(table, content);
 
     const blob=new Blob([braille],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");
