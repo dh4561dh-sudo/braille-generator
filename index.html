@@ -55,7 +55,7 @@ button{
 <div class="container">
 <div class="header">
   <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
-  <div>v1.1</div>
+  <div>v2.0</div>
 </div>
 
 <div class="body">
@@ -81,16 +81,14 @@ button{
 </div>
 
 <script>
-
 /* =========================
    TRADUÇÕES PROFISSIONAIS
 ========================= */
 
 const translations = {
-
 pt:{
 notice:`<strong>Aviso Importante:</strong><br>
-Este gerador produz Braille textual padrão internacional (Unicode).
+Este gerador produz Braille textual normativo (tabelas oficiais).
 Destina-se à impressão em embossers compatíveis.
 Não contempla notação matemática ou científica avançada.`,
 labelUrl:"URL da postagem:",
@@ -101,10 +99,9 @@ alertUrl:"Por favor, informe a URL da postagem.",
 alertError:"Não foi possível acessar o conteúdo da postagem.",
 filename:"documento_braille.brf"
 },
-
 en:{
 notice:`<strong>Important Notice:</strong><br>
-This generator produces standard international Braille (Unicode).
+This generator produces normative Braille using official tables.
 Intended for printing on compatible Braille embossers.
 Does not support advanced mathematical or scientific notation.`,
 labelUrl:"Post URL:",
@@ -115,10 +112,9 @@ alertUrl:"Please enter the post URL.",
 alertError:"Unable to access the post content.",
 filename:"braille_document.brf"
 },
-
 es:{
 notice:`<strong>Aviso Importante:</strong><br>
-Este generador produce Braille textual estándar internacional (Unicode).
+Este generador produce Braille normativo usando tablas oficiales.
 Está destinado a la impresión en embossers compatibles.
 No admite notación matemática o científica avanzada.`,
 labelUrl:"URL de la publicación:",
@@ -129,10 +125,9 @@ alertUrl:"Por favor, introduzca la URL de la publicación.",
 alertError:"No se pudo acceder al contenido de la publicación.",
 filename:"documento_braille.brf"
 },
-
 fr:{
 notice:`<strong>Avis Important :</strong><br>
-Ce générateur produit du Braille standard international (Unicode).
+Ce générateur produit du Braille normatif à l’aide de tables officielles.
 Destiné à l’impression sur des embossers compatibles.
 Ne prend pas en charge la notation mathématique ou scientifique avancée.`,
 labelUrl:"URL de l’article :",
@@ -143,10 +138,9 @@ alertUrl:"Veuillez saisir l’URL de l’article.",
 alertError:"Impossible d’accéder au contenu de l’article.",
 filename:"document_braille.brf"
 },
-
 de:{
 notice:`<strong>Wichtiger Hinweis:</strong><br>
-Dieser Generator erzeugt internationales Standard-Braille (Unicode).
+Dieser Generator erzeugt normatives Braille mit offiziellen Tabellen.
 Vorgesehen für den Druck auf kompatiblen Braille-Embossern.
 Unterstützt keine erweiterte mathematische oder wissenschaftliche Notation.`,
 labelUrl:"Beitrags-URL:",
@@ -157,10 +151,9 @@ alertUrl:"Bitte geben Sie die Beitrags-URL ein.",
 alertError:"Der Inhalt des Beitrags konnte nicht abgerufen werden.",
 filename:"braille_dokument.brf"
 },
-
 it:{
 notice:`<strong>Avviso Importante:</strong><br>
-Questo generatore produce Braille standard internazionale (Unicode).
+Questo generatore produce Braille normativo con tabelle ufficiali.
 Destinato alla stampa su embossers compatibili.
 Non supporta notazione matematica o scientifica avanzata.`,
 labelUrl:"URL del post:",
@@ -171,7 +164,6 @@ alertUrl:"Inserisci l’URL del post.",
 alertError:"Impossibile accedere al contenuto del post.",
 filename:"documento_braille.brf"
 }
-
 };
 
 /* =========================
@@ -181,7 +173,6 @@ filename:"documento_braille.brf"
 function updateLanguage(){
   const lang=document.getElementById("lang").value;
   const t=translations[lang];
-
   document.getElementById("noticeBox").innerHTML=t.notice;
   document.getElementById("labelUrl").innerText=t.labelUrl;
   document.getElementById("urlInput").placeholder=t.placeholder;
@@ -193,21 +184,10 @@ document.getElementById("lang").addEventListener("change",updateLanguage);
 updateLanguage();
 
 /* =========================
-   MAPA BRAILLE SIMPLIFICADO
-========================= */
-
-const brailleMap={
-a:"⠁",b:"⠃",c:"⠉",d:"⠙",e:"⠑",f:"⠋",g:"⠛",h:"⠓",i:"⠊",j:"⠚",
-k:"⠅",l:"⠇",m:"⠍",n:"⠝",o:"⠕",p:"⠏",q:"⠟",r:"⠗",s:"⠎",t:"⠞",
-u:"⠥",v:"⠧",w:"⠺",x:"⠭",y:"⠽",z:"⠵"," ":"⠀","\n":"\n"
-};
-
-/* =========================
-   GERAÇÃO DO ARQUIVO
+   GERAÇÃO BRAILLE NORMATIVA
 ========================= */
 
 async function generate(){
-
   const lang=document.getElementById("lang").value;
   const t=translations[lang];
   const url=document.getElementById("urlInput").value.trim();
@@ -229,30 +209,37 @@ async function generate(){
                   doc.querySelector(".post-body")?.innerText ||
                   doc.body.innerText;
 
-    // 🔥 CORREÇÃO DEFINITIVA DE ACENTOS
-    const text=content
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"")
-      .toLowerCase();
-
-    let result="";
-    for(let c of text){
-      result+=brailleMap[c]||"";
+    if(!window.liblouis){
+      alert("Motor Braille não carregado.");
+      return;
     }
 
-    const blob=new Blob([result],{type:"text/plain;charset=utf-8"});
+    const tables={
+      pt:"pt-br.dis",
+      en:"en-ueb-g2.ctb",
+      es:"es.ctb",
+      fr:"fr-g2.ctb",
+      de:"de-g2.ctb",
+      it:"it.ctb"
+    };
+
+    const table=tables[lang]||"en-ueb-g2.ctb";
+    const braille=await window.liblouis.translateString(table, content);
+
+    const blob=new Blob([braille],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
     a.download=t.filename;
     a.click();
 
   }catch(e){
+    console.error(e);
     alert(t.alertError);
   }
-
 }
-
 </script>
+
+<script src="https://unpkg.com/liblouis@0.3.1/dist/liblouis.min.js"></script>
 
 </body>
 </html>
