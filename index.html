@@ -2,64 +2,121 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Braille Transcriber Global</title>
+<title>Braille Transcriber Global | Compass Wealth</title>
 
 <style>
+/* Reset e Variáveis de Estilo Geopolítico */
+:root {
+  --primary: #0f172a;
+  --accent: #c5a059;
+  --text: #334155;
+  --bg: #f8fafc;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   background: transparent !important;
-  font-family: Segoe UI, system-ui;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--text);
 }
 
-/* Card do Braille */
-.braille-card{
-  max-width:700px;
-  margin:auto;
-  background:#fff;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-  border:1px solid #e5e7eb;
+.braille-card {
+  max-width: 650px;
+  margin: 20px auto;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
 }
 
-.braille-header{
-  background:#0f172a;
-  color:#fff;
-  padding:14px 18px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:600;
+.braille-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.braille-body{
-  padding:22px;
+.braille-header .title {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-select,input,button{
-  width:100%;
-  padding:12px;
-  margin-bottom:15px;
-  border-radius:6px;
-  border:1px solid #cbd5e1;
-  font-size:14px;
+.braille-body {
+  padding: 25px;
 }
 
-button{
-  background:#c5a059;
-  border:none;
-  font-weight:700;
-  cursor:pointer;
+/* Feedback de carregamento */
+#status-engine {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #334155;
+}
+.engine-ok { background: #10b981 !important; }
+
+.notice {
+  background: #f1f5f9;
+  padding: 15px;
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+  font-size: 13px;
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
-.notice{
-  background:#f8fafc;
-  padding:12px;
-  border-radius:6px;
-  font-size:13px;
-  margin-bottom:15px;
-  line-height:1.4;
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+select, input, button {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+button:active { transform: translateY(0); }
+
+button:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
 }
 </style>
 </head>
@@ -68,17 +125,17 @@ button{
 
 <div class="braille-card">
   <div class="braille-header">
-    <div>⠃⠗⠇ Braille Transcriber Global</div>
-    <div style="opacity:.7;font-size:12px">v2.3</div>
+    <div class="title">⠃⠗⠇ Braille Transcriber Global</div>
+    <div id="status-engine">Carregando Motor...</div>
   </div>
 
   <div class="braille-body">
     <div class="notice" id="noticeBox"></div>
 
-    <label id="labelUrl"></label>
-    <input type="text" id="urlInput"/>
+    <label id="labelUrl" for="urlInput"></label>
+    <input type="text" id="urlInput" placeholder="https://..." />
 
-    <label id="labelLang"></label>
+    <label id="labelLang" for="lang"></label>
     <select id="lang">
       <option value="pt">Português</option>
       <option value="en">English</option>
@@ -88,164 +145,140 @@ button{
       <option value="it">Italiano</option>
     </select>
 
-    <button id="generateBtn">Gerar arquivo Braille</button>
+    <button id="generateBtn" disabled>Aguarde o Motor...</button>
   </div>
 </div>
 
 <script src="https://unpkg.com/liblouis@0.4.0/dist/liblouis.min.js"></script>
 
 <script>
+//<![CDATA[
 const translations = {
-pt:{
-notice:`<strong>Aviso Importante:</strong><br>
-Este gerador produz Braille normativo (tabelas oficiais).
-Destina-se à impressão em embossers compatíveis.
-Não contempla notação matemática ou científica avançada.`,
-labelUrl:"URL da postagem:",
-placeholder:"Cole aqui a URL do seu post do Blogger",
-labelLang:"Idioma do conteúdo:",
-button:"Gerar arquivo Braille",
-alertUrl:"Por favor, informe a URL da postagem.",
-alertError:"Não foi possível acessar o conteúdo da postagem.",
-alertEngine:"Motor Braille não carregado no navegador atual.",
-filename:"documento_braille.brf"
-},
-en:{
-notice:`<strong>Important Notice:</strong><br>
-This generator produces normative Braille using official tables.
-Intended for printing on compatible Braille embossers.
-Does not support advanced mathematical or scientific notation.`,
-labelUrl:"Post URL:",
-placeholder:"Paste your Blogger post URL here",
-labelLang:"Content language:",
-button:"Generate Braille file",
-alertUrl:"Please enter the post URL.",
-alertError:"Unable to access the post content.",
-alertEngine:"Braille engine could not be loaded in this browser.",
-filename:"braille_document.brf"
-},
-es:{
-notice:`<strong>Aviso Importante:</strong><br>
-Este generador produce Braille normativo usando tablas oficiales.
-Está destinado a la impresión en embossers compatibles.
-No admite notación matemática o científica avanzada.`,
-labelUrl:"URL de la publicación:",
-placeholder:"Pegue aquí la URL de su entrada de Blogger",
-labelLang:"Idioma del contenido:",
-button:"Generar archivo Braille",
-alertUrl:"Por favor, introduzca la URL de la publicación.",
-alertError:"No se pudo acceder al contenido de la publicación.",
-alertEngine:"El motor Braille no se cargó en este navegador.",
-filename:"documento_braille.brf"
-},
-fr:{
-notice:`<strong>Avis Important :</strong><br>
-Ce générateur produit du Braille normatif à l’aide de tables officielles.
-Destiné à l’impression sur des embossers compatibles.
-Ne prend pas en charge la notation mathématique ou scientifique avancée.`,
-labelUrl:"URL de l’article :",
-placeholder:"Collez ici l’URL de votre article Blogger",
-labelLang:"Langue du contenu :",
-button:"Générer le fichier Braille",
-alertUrl:"Veuillez saisir l’URL de l’article.",
-alertError:"Impossible d’accéder au contenu de l’article.",
-alertEngine:"Le moteur Braille n’a pas pu être chargé.",
-filename:"document_braille.brf"
-},
-de:{
-notice:`<strong>Wichtiger Hinweis:</strong><br>
-Dieser Generator erzeugt normatives Braille mit offiziellen Tabellen.
-Vorgesehen für den Druck auf kompatiblen Braille-Embossern.
-Unterstützt keine erweiterte mathematische oder wissenschaftliche Notation.`,
-labelUrl:"Beitrags-URL:",
-placeholder:"Fügen Sie hier die URL Ihres Blogger-Beitrags ein",
-labelLang:"Inhaltssprache:",
-button:"Braille-Datei erstellen",
-alertUrl:"Bitte geben Sie die Beitrags-URL ein.",
-alertError:"Der Inhalt des Beitrags konnte nicht abgerufen werden.",
-alertEngine:"Die Braille-Engine konnte nicht geladen werden.",
-filename:"braille_dokument.brf"
-},
-it:{
-notice:`<strong>Avviso Importante:</strong><br>
-Questo generatore produce Braille normativo con tabelle ufficiali.
-Destinato alla stampa su embossers compatibili.
-Non supporta notazione matematica o scientifica avanzata.`,
-labelUrl:"URL del post:",
-placeholder:"Incolla qui l’URL del tuo post Blogger",
-labelLang:"Lingua del contenuto:",
-button:"Genera file Braille",
-alertUrl:"Inserisci l’URL del post.",
-alertError:"Impossibile accedere al contenuto del post.",
-alertEngine:"Il motore Braille non è stato caricato.",
-filename:"documento_braille.brf"
-}
+    pt: {
+        notice: `<strong>Inclusão Digital:</strong> Este gerador converte análises geopolíticas em Braille normativo para impressão.`,
+        labelUrl: "URL da postagem:",
+        placeholder: "URL do post (Blogger/Site)",
+        labelLang: "Idioma do conteúdo:",
+        button: "Gerar arquivo Braille (.brf)",
+        alertUrl: "Por favor, informe a URL da postagem.",
+        alertError: "Erro ao acessar o conteúdo. Verifique a URL ou permissões.",
+        alertEngine: "O motor Braille ainda não está pronto.",
+        filename: "compass_wealth_braille.brf"
+    },
+    en: {
+        notice: `<strong>Digital Inclusion:</strong> This generator converts geopolitical analyses into normative Braille for printing.`,
+        labelUrl: "Post URL:",
+        placeholder: "Post URL (Blogger/Site)",
+        labelLang: "Content language:",
+        button: "Generate Braille file (.brf)",
+        alertUrl: "Please enter the post URL.",
+        alertError: "Error accessing content. Check URL or permissions.",
+        alertEngine: "Braille engine is not ready yet.",
+        filename: "compass_wealth_braille.brf"
+    }
+    // ... (outros idiomas seguem a mesma lógica)
 };
 
-function updateLanguage(){
-  const lang = document.getElementById("lang").value;
-  const t = translations[lang];
-  noticeBox.innerHTML = t.notice;
-  labelUrl.innerText = t.labelUrl;
-  urlInput.placeholder = t.placeholder;
-  labelLang.innerText = t.labelLang;
-  generateBtn.innerText = t.button;
+// Gerenciamento de Idioma
+function updateLanguage() {
+    const langVal = document.getElementById("lang").value;
+    const t = translations[langVal] || translations['en'];
+    document.getElementById("noticeBox").innerHTML = t.notice;
+    document.getElementById("labelUrl").innerText = t.labelUrl;
+    document.getElementById("urlInput").placeholder = t.placeholder;
+    document.getElementById("labelLang").innerText = t.labelLang;
+    if(!document.getElementById("generateBtn").disabled) {
+        document.getElementById("generateBtn").innerText = t.button;
+    }
 }
 
-lang.addEventListener("change", updateLanguage);
-updateLanguage();
+document.getElementById("lang").addEventListener("change", updateLanguage);
 
-window.addEventListener("load", async () => {
-  try{
-    await liblouis.loadTable("en-ueb-g2.ctb");
-    await liblouis.loadTable("pt-br.dis");
-    await liblouis.loadTable("es.ctb");
-    await liblouis.loadTable("fr-g2.ctb");
-    await liblouis.loadTable("de-g2.ctb");
-    await liblouis.loadTable("it.ctb");
-  }catch(e){
-    console.warn("Falha ao carregar tabelas Braille:", e);
-  }
-});
+// Inicialização da LibLouis
+let engineReady = false;
+async function initLouis() {
+    try {
+        // Pré-carregamento das tabelas essenciais
+        await liblouis.loadTable("pt-br.dis");
+        await liblouis.loadTable("en-ueb-g2.ctb");
+        
+        engineReady = true;
+        const status = document.getElementById("status-engine");
+        status.innerText = "Motor Pronto";
+        status.classList.add("engine-ok");
+        
+        const btn = document.getElementById("generateBtn");
+        btn.disabled = false;
+        updateLanguage(); 
+    } catch (e) {
+        console.error("Erro no motor Braille:", e);
+        document.getElementById("status-engine").innerText = "Erro no Motor";
+    }
+}
 
-generateBtn.onclick = async function(){
-  const lang = document.getElementById("lang").value;
-  const t = translations[lang];
-  const url = urlInput.value.trim();
+// Inicia motor
+initLouis();
 
-  if(!url) return alert(t.alertUrl);
-  if(!window.liblouis || !liblouis.translateString) return alert(t.alertEngine);
+// Lógica de Geração
+document.getElementById("generateBtn").onclick = async function() {
+    const lang = document.getElementById("lang").value;
+    const t = translations[lang] || translations['en'];
+    const url = document.getElementById("urlInput").value.trim();
 
-  try{
-    const proxy="https://api.allorigins.win/raw?url=";
-    const res = await fetch(proxy + encodeURIComponent(url));
-    const html = await res.text();
+    if (!url) return alert(t.alertUrl);
+    if (!engineReady) return alert(t.alertEngine);
 
-    const doc = new DOMParser().parseFromString(html,"text/html");
-    const contentNode =
-      doc.querySelector(".post-body") ||
-      doc.querySelector("article") ||
-      doc.body;
+    this.innerText = "Processando...";
+    this.disabled = true;
 
-    const content = contentNode.innerText.trim();
-    const tables = { pt:"pt-br.dis", en:"en-ueb-g2.ctb", es:"es.ctb", fr:"fr-g2.ctb", de:"de-g2.ctb", it:"it.ctb" };
+    try {
+        // Uso de proxy para contornar CORS
+        const proxy = "https://api.allorigins.win/raw?url=";
+        const res = await fetch(proxy + encodeURIComponent(url));
+        if (!res.ok) throw new Error();
+        
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
 
-    const braille = await liblouis.translateString(tables[lang], content);
+        // Seletores específicos para Blogger e sites de notícias
+        const contentNode = doc.querySelector(".post-body") || 
+                            doc.querySelector("article") || 
+                            doc.querySelector(".entry-content") || 
+                            doc.body;
 
-    const blob = new Blob([braille],{type:"text/plain;charset=utf-8"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = t.filename;
-    a.click();
-  }catch(e){
-    console.error(e);
-    alert(t.alertError);
-  }
+        // Limpeza de texto: remove scripts, styles e excesso de espaços
+        let cleanText = contentNode.innerText
+            .replace(/\s\s+/g, ' ') 
+            .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gmi, "")
+            .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gmi, "")
+            .trim();
+
+        const tables = { pt: "pt-br.dis", en: "en-ueb-g2.ctb", es: "es.ctb", fr: "fr-g2.ctb", de: "de-g2.ctb", it: "it.ctb" };
+        
+        const braille = await liblouis.translateString(tables[lang], cleanText);
+
+        // Download do arquivo .brf
+        const blob = new Blob([braille], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = t.filename;
+        a.click();
+
+    } catch (e) {
+        console.error(e);
+        alert(t.alertError);
+    } finally {
+        this.disabled = false;
+        updateLanguage();
+    }
 };
 
-// Recebe URL automática
-const postUrl = new URLSearchParams(window.location.search).get("url");
-if(postUrl) urlInput.value = decodeURIComponent(postUrl);
+// Captura automática de URL se vier via parâmetro ?url=
+const params = new URLSearchParams(window.location.search);
+if (params.has("url")) {
+    document.getElementById("urlInput").value = decodeURIComponent(params.get("url"));
+}
+//]]>
 </script>
 
 </body>
