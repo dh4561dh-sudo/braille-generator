@@ -47,15 +47,15 @@ button{
   font-size:13px;
   margin-bottom:15px;
 }
-  /* Modo embed para Blogger */
+
+/* Modo embed para Blogger */
 html, body {
   margin: 0;
   padding: 0;
 }
-
 body.embed {
-  background: transparent;
-  padding: 0;
+  background: transparent !important;
+  padding: 0 !important;
 }
 </style>
 </head>
@@ -65,15 +65,15 @@ body.embed {
 <div class="container">
   <div class="header">
     <div>⠃⠗⠇ BRAILLE TRANSCRIBER GLOBAL</div>
-    <div>v2.1</div>
+    <div>v2.2</div>
   </div>
 
   <div class="body">
-
     <div class="notice" id="noticeBox"></div>
 
     <label id="labelUrl"></label>
-<input type="text" id="urlInput" placeholder="" />
+    <input type="text" id="urlInput" />
+
     <label id="labelLang"></label>
     <select id="lang">
       <option value="pt">Português</option>
@@ -85,17 +85,17 @@ body.embed {
     </select>
 
     <button id="generateBtn" onclick="generate()"></button>
-
   </div>
 </div>
 
 <script>
-  <script>
 const params = new URLSearchParams(window.location.search);
 if (params.get("embed") === "1") {
   document.body.classList.add("embed");
 }
 </script>
+
+<script>
 const translations = {
 pt:{
 notice:`<strong>Aviso Importante:</strong><br>
@@ -200,10 +200,7 @@ async function generate(){
   const t=translations[lang];
   const url=urlInput.value.trim();
 
-  if(!url){
-    alert(t.alertUrl);
-    return;
-  }
+  if(!url){ alert(t.alertUrl); return; }
 
   if(!window.liblouis || !window.liblouis.translateString){
     alert(t.alertEngine);
@@ -240,8 +237,7 @@ async function generate(){
       it:"it.ctb"
     };
 
-    const table=tables[lang] || "en-ueb-g2.ctb";
-    const braille = await window.liblouis.translateString(table, content);
+    const braille = await window.liblouis.translateString(tables[lang], content);
 
     const blob=new Blob([braille],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");
@@ -254,16 +250,26 @@ async function generate(){
     alert(t.alertError);
   }
 }
-  // Permite receber a URL do Blogger automaticamente
-const params = new URLSearchParams(window.location.search);
-const postUrl = params.get("url");
 
+const postUrl = new URLSearchParams(window.location.search).get("url");
 if (postUrl) {
   document.getElementById("urlInput").value = decodeURIComponent(postUrl);
 }
 </script>
 
-<script src="https://unpkg.com/liblouis@0.3.1/dist/liblouis.min.js"></script>
+<script src="https://unpkg.com/liblouis@0.4.0/dist/liblouis.min.js"></script>
+<script>
+window.addEventListener("load", async () => {
+  if (window.liblouis && window.liblouis.loadTable) {
+    await window.liblouis.loadTable("en-ueb-g2.ctb");
+    await window.liblouis.loadTable("pt-br.dis");
+    await window.liblouis.loadTable("es.ctb");
+    await window.liblouis.loadTable("fr-g2.ctb");
+    await window.liblouis.loadTable("de-g2.ctb");
+    await window.liblouis.loadTable("it.ctb");
+  }
+});
+</script>
 
 </body>
 </html>
