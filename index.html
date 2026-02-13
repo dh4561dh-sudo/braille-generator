@@ -90,6 +90,12 @@ body.embed {
 </div>
 
 <script>
+  <script>
+const params = new URLSearchParams(window.location.search);
+if (params.get("embed") === "1") {
+  document.body.classList.add("embed");
+}
+</script>
 const translations = {
 pt:{
 notice:`<strong>Aviso Importante:</strong><br>
