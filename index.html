@@ -63,8 +63,7 @@ button{
     <div class="notice" id="noticeBox"></div>
 
     <label id="labelUrl"></label>
-    <input type="text" id="urlInput">
-
+<input type="text" id="urlInput" placeholder="" />
     <label id="labelLang"></label>
     <select id="lang">
       <option value="pt">Português</option>
@@ -238,6 +237,13 @@ async function generate(){
     console.error(e);
     alert(t.alertError);
   }
+}
+  // Permite receber a URL do Blogger automaticamente
+const params = new URLSearchParams(window.location.search);
+const postUrl = params.get("url");
+
+if (postUrl) {
+  document.getElementById("urlInput").value = decodeURIComponent(postUrl);
 }
 </script>
 
