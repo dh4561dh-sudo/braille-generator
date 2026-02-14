@@ -13,7 +13,7 @@
   button{ background:#c5a059; color: #fff; border:none; font-weight:700; cursor:pointer; }
   button:disabled { background: #ccc; cursor: not-allowed; }
   .notice{ background:#f8fafc; padding:12px; border-radius:6px; font-size:13px; margin-bottom:15px; line-height:1.4; }
-  #status-log { font-size: 11px; text-align: center; margin-top: -10px; margin-bottom: 10px; color: #666; font-style: italic; }
+  #status-log { font-size: 11px; text-align: center; margin-top: -10px; margin-bottom: 10px; color: #666; }
 </style>
 </head>
 <body>
@@ -21,11 +21,11 @@
 <div class="braille-card">
   <div class="braille-header">
     <div>⠃⠗⠇ Braille Transcriber Global</div>
-    <div style="opacity:.7;font-size:12px">v2.5</div>
+    <div style="opacity:.7;font-size:12px">v2.6</div>
   </div>
   <div class="braille-body">
     <div class="notice" id="noticeBox"></div>
-    <div id="status-log">Pronto para iniciar</div>
+    <div id="status-log">Aguardando comando...</div>
 
     <label id="labelUrl"></label>
     <input type="text" id="urlInput"/>
@@ -49,11 +49,18 @@
 <script>
 //<![CDATA[
 const translations = {
-    pt: { notice: `<strong>Aviso Importante:</strong><br>Gerador de Braille normativo para análises da Compass Wealth.`, labelUrl: "URL da postagem:", placeholder: "Cole a URL aqui", labelLang: "Idioma:", button: "Gerar arquivo Braille", loading: "Carregando Motor...", processing: "Traduzindo...", error: "Erro ao processar conteúdo.", engineError: "Erro ao carregar tabelas." },
-    en: { notice: `<strong>Important Notice:</strong><br>Normative Braille generator for Compass Wealth analyses.`, labelUrl: "Post URL:", placeholder: "Paste URL here", labelLang: "Language:", button: "Generate Braille file", loading: "Loading Engine...", processing: "Translating...", error: "Error accessing content.", engineError: "Engine error." }
+    pt: { notice: `<strong>Aviso:</strong> Gerador de Braille normativo.`, labelUrl: "URL da postagem:", placeholder: "Cole a URL aqui", labelLang: "Idioma:", button: "Gerar arquivo Braille", loading: "Configurando Motor...", error: "Erro na tradução/acesso." },
+    en: { notice: `<strong>Notice:</strong> Normative Braille generator.`, labelUrl: "Post URL:", placeholder: "Paste URL here", labelLang: "Language:", button: "Generate Braille file", loading: "Setting up Engine...", error: "Translation/Access error." }
 };
 
-const tables = { pt: "pt-br.dis", en: "en-ueb-g2.ctb", es: "es.ctb", fr: "fr-g2.ctb", de: "de-g2.ctb", it: "it.ctb" };
+const tableMap = { 
+    pt: "pt-br.dis", 
+    en: "en-ueb-g2.ctb", 
+    es: "es.ctb", 
+    fr: "fr-g2.ctb", 
+    de: "de-g2.ctb", 
+    it: "it.ctb" 
+};
 
 function updateLanguage(){
     const lang = document.getElementById("lang").value;
@@ -75,39 +82,45 @@ document.getElementById("generateBtn").onclick = async function(){
     const url = document.getElementById("urlInput").value.trim();
     const log = document.getElementById("status-log");
 
-    if(!url) return alert(t.error);
+    if(!url) return alert("Informe a URL");
 
     try {
         btn.disabled = true;
-        
-        // 1. Tenta carregar o motor e a tabela específica
         log.innerText = t.loading;
-        await liblouis.loadTable(tables[lang]);
-        
-        // 2. Busca o conteúdo via Proxy
-        log.innerText = t.processing;
+
+        // 1. Verificar se a liblouis carregou
+        if (!window.liblouis) {
+            throw new Error("LibLouis não carregada. Verifique sua conexão.");
+        }
+
+        // 2. Tentar traduzir diretamente. 
+        // A liblouis da unpkg já vem pré-configurada para buscar tabelas remotamente.
+        log.innerText = "Buscando conteúdo...";
         const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+        if(!res.ok) throw new Error("Falha ao buscar conteúdo.");
+        
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
-        
         const contentNode = doc.querySelector(".post-body") || doc.querySelector("article") || doc.body;
-        const content = contentNode.innerText.trim();
+        const textToTranslate = contentNode.innerText.trim();
 
-        // 3. Traduz
-        const braille = await liblouis.translateString(tables[lang], content);
+        log.innerText = "Traduzindo para Braille...";
+        // A liblouis faz o download automático da tabela ao chamar translateString
+        const brailleResult = await liblouis.translateString(tableMap[lang], textToTranslate);
 
-        // 4. Download
-        const blob = new Blob([braille], {type:"text/plain;charset=utf-8"});
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "braille_compass_wealth.brf";
-        a.click();
+        // 3. Gerar arquivo
+        const blob = new Blob([brailleResult], {type: "text/plain;charset=utf-8"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `compass_wealth_${lang}.brf`;
+        link.click();
         
-        log.innerText = "Concluído com sucesso";
+        log.innerText = "Sucesso!";
         log.style.color = "green";
+
     } catch (e) {
-        console.error(e);
-        log.innerText = t.engineError;
+        console.error("Erro Crítico:", e);
+        log.innerText = "Erro: " + e.message;
         log.style.color = "red";
         alert(t.error);
     } finally {
@@ -116,6 +129,7 @@ document.getElementById("generateBtn").onclick = async function(){
     }
 };
 
+// Auto-fill URL
 const postUrl = new URLSearchParams(window.location.search).get("url");
 if(postUrl) document.getElementById("urlInput").value = decodeURIComponent(postUrl);
 //]]>
