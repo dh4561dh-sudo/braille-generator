@@ -1,141 +1,57 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Braille Transcriber Global</title>
+<!-- BRAILLE TRANSCRIBER CARD -->
+<div id="braille-card" style="
+  max-width:700px;
+  margin:0 auto;
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+  font-family:Segoe UI,system-ui;
+">
 
-<script src="https://cdn.jsdelivr.net/npm/liblouis@0.4.0/dist/liblouis.min.js"></script>
-
-<style>
-  html, body { margin: 0; padding: 0; background: transparent !important; font-family: 'Segoe UI', system-ui, sans-serif; }
-  .braille-card{ max-width:700px; margin:10px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.08); border:1px solid #e5e7eb; }
-  .braille-header{ background:#0f172a; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
-  .braille-body{ padding:22px; }
-  select,input,button{ width:100%; padding:12px; margin-bottom:15px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; box-sizing: border-box; }
-  button{ background:#c5a059; color: #fff; border:none; font-weight:700; cursor:pointer; }
-  button:disabled { background: #ccc; cursor: not-allowed; }
-  .notice{ background:#f8fafc; padding:12px; border-radius:6px; font-size:13px; margin-bottom:15px; line-height:1.4; }
-  #status-log { font-size: 11px; text-align: center; margin-top: -10px; margin-bottom: 10px; color: #666; }
-</style>
-</head>
-<body>
-
-<div class="braille-card">
-  <div class="braille-header">
+  <div style="
+    background:#0f172a;
+    color:#fff;
+    padding:14px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-weight:600;
+  ">
     <div>⠃⠗⠇ Braille Transcriber Global</div>
-    <div style="opacity:.7;font-size:12px">v2.7</div>
+    <div style="opacity:.7;font-size:12px">Acessibilidade</div>
   </div>
-  <div class="braille-body">
-    <div class="notice" id="noticeBox"></div>
-    <div id="status-log">Verificando sistema...</div>
 
-    <label id="labelUrl"></label>
-    <input type="text" id="urlInput"/>
+  <div style="padding:22px">
 
-    <label id="labelLang"></label>
-    <select id="lang">
-      <option value="pt">Português</option>
-      <option value="en">English</option>
-      <option value="es">Español</option>
-      <option value="fr">Français</option>
-      <option value="de">Deutsch</option>
-      <option value="it">Italiano</option>
-    </select>
+    <p style="font-size:13px;color:#334155;margin-bottom:12px;line-height:1.4">
+      Gere automaticamente a versão Braille desta postagem para impressão em embossers compatíveis.
+    </p>
 
-    <button id="generateBtn" disabled>Iniciando...</button>
+    <a 
+      id="brailleLink"
+      href="#"
+      target="_blank"
+      style="
+        display:block;
+        text-align:center;
+        background:#c5a059;
+        color:#000;
+        padding:12px;
+        border-radius:6px;
+        font-weight:700;
+        text-decoration:none;
+      ">
+      Gerar arquivo Braille (.BRF)
+    </a>
+
   </div>
 </div>
 
 <script>
-//<![CDATA[
-const translations = {
-    pt: { notice: `<strong>Aviso:</strong> Gerador de Braille normativo.`, labelUrl: "URL da postagem:", placeholder: "URL aqui", labelLang: "Idioma:", button: "Gerar arquivo Braille", loading: "Preparando tabelas...", ready: "Gerar arquivo Braille", error: "Erro na tradução." },
-    en: { notice: `<strong>Notice:</strong> Normative Braille generator.`, labelUrl: "Post URL:", placeholder: "URL here", labelLang: "Language:", button: "Generate Braille file", loading: "Loading tables...", ready: "Generate Braille file", error: "Translation error." }
-};
-
-const tableMap = { pt: "pt-br.dis", en: "en-ueb-g2.ctb", es: "es.ctb", fr: "fr-g2.ctb", de: "de-g2.ctb", it: "it.ctb" };
-
-function updateLanguage(){
-    const lang = document.getElementById("lang").value;
-    const t = translations[lang] || translations['en'];
-    document.getElementById("noticeBox").innerHTML = t.notice;
-    document.getElementById("labelUrl").innerText = t.labelUrl;
-    document.getElementById("urlInput").placeholder = t.placeholder;
-    document.getElementById("labelLang").innerText = t.labelLang;
-    if(!document.getElementById("generateBtn").disabled) {
-        document.getElementById("generateBtn").innerText = t.button;
-    }
-}
-
-// 1. Verifica se a biblioteca carregou assim que o script rodar
-function checkEngine() {
-    const log = document.getElementById("status-log");
-    const btn = document.getElementById("generateBtn");
-    
-    if (window.liblouis) {
-        log.innerText = "Motor Braille pronto.";
-        log.style.color = "green";
-        btn.disabled = false;
-        updateLanguage();
-    } else {
-        log.innerText = "Erro: Biblioteca não detectada. Tentando reconectar...";
-        log.style.color = "red";
-        // Tenta novamente em 2 segundos
-        setTimeout(checkEngine, 2000);
-    }
-}
-
-document.getElementById("lang").addEventListener("change", updateLanguage);
-
-// 2. Lógica de tradução
-document.getElementById("generateBtn").onclick = async function(){
-    const btn = this;
-    const lang = document.getElementById("lang").value;
-    const t = translations[lang] || translations['en'];
-    const url = document.getElementById("urlInput").value.trim();
-    const log = document.getElementById("status-log");
-
-    if(!url) return alert("Informe a URL");
-
-    try {
-        btn.disabled = true;
-        log.innerText = t.loading;
-
-        // Tenta buscar o conteúdo
-        const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, "text/html");
-        const contentNode = doc.querySelector(".post-body") || doc.querySelector("article") || doc.body;
-        const textToTranslate = contentNode.innerText.trim();
-
-        log.innerText = "Traduzindo...";
-        // A tradução em si
-        const brailleResult = await liblouis.translateString(tableMap[lang], textToTranslate);
-
-        const blob = new Blob([brailleResult], {type: "text/plain;charset=utf-8"});
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `braille_compass_${lang}.brf`;
-        link.click();
-        
-        log.innerText = "Sucesso!";
-    } catch (e) {
-        log.innerText = "Erro no processo.";
-        alert(t.error);
-    } finally {
-        btn.disabled = false;
-        btn.innerText = t.button;
-    }
-};
-
-// Inicia verificação
-window.onload = checkEngine;
-
-// Auto-fill URL
-const postUrl = new URLSearchParams(window.location.search).get("url");
-if(postUrl) document.getElementById("urlInput").value = decodeURIComponent(postUrl);
-//]]>
+(function(){
+  const url = encodeURIComponent(window.location.href);
+  document.getElementById("brailleLink").href =
+    "https://dh4561dh-sudo.github.io/braille-generator/?url=" + url + "&embed=1";
+})();
 </script>
-</body>
-</html>
