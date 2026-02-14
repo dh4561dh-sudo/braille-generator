@@ -4,93 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Braille Transcriber Global</title>
-
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: transparent !important;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.braille-card{
-  max-width:700px;
-  margin:10px auto;
-  background:#fff;
-  border-radius:12px;
-  overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-  border:1px solid #e5e7eb;
-}
-
-.braille-header{
-  background:#0f172a;
-  color:#fff;
-  padding:14px 18px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  font-weight:600;
-}
-
-.braille-body{
-  padding:22px;
-}
-
-select,input,button{
-  width:100%;
-  padding:12px;
-  margin-bottom:15px;
-  border-radius:6px;
-  border:1px solid #cbd5e1;
-  font-size:14px;
-  box-sizing: border-box;
-}
-
-button{
-  background:#c5a059;
-  color: #fff;
-  border:none;
-  font-weight:700;
-  cursor:pointer;
-  transition: opacity 0.3s;
-}
-
-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.notice{
-  background:#f8fafc;
-  padding:12px;
-  border-radius:6px;
-  font-size:13px;
-  margin-bottom:15px;
-  line-height:1.4;
-}
-
-#status {
-  font-size: 11px;
-  text-align: center;
-  margin-top: -10px;
-  margin-bottom: 10px;
-  color: #666;
-}
+  html, body { margin: 0; padding: 0; background: transparent !important; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .braille-card{ max-width:700px; margin:10px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.08); border:1px solid #e5e7eb; }
+  .braille-header{ background:#0f172a; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
+  .braille-body{ padding:22px; }
+  select,input,button{ width:100%; padding:12px; margin-bottom:15px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; box-sizing: border-box; }
+  button{ background:#c5a059; color: #fff; border:none; font-weight:700; cursor:pointer; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+  .notice{ background:#f8fafc; padding:12px; border-radius:6px; font-size:13px; margin-bottom:15px; line-height:1.4; }
+  #status-log { font-size: 11px; text-align: center; margin-top: -10px; margin-bottom: 10px; color: #666; font-style: italic; }
 </style>
 </head>
-
 <body>
 
 <div class="braille-card">
   <div class="braille-header">
     <div>⠃⠗⠇ Braille Transcriber Global</div>
-    <div style="opacity:.7;font-size:12px">v2.4</div>
+    <div style="opacity:.7;font-size:12px">v2.5</div>
   </div>
-
   <div class="braille-body">
     <div class="notice" id="noticeBox"></div>
-    <div id="status">Iniciando motor braille...</div>
+    <div id="status-log">Pronto para iniciar</div>
 
     <label id="labelUrl"></label>
     <input type="text" id="urlInput"/>
@@ -105,7 +40,7 @@ button:disabled {
       <option value="it">Italiano</option>
     </select>
 
-    <button id="generateBtn" disabled>Aguarde o carregamento...</button>
+    <button id="generateBtn">Gerar arquivo Braille</button>
   </div>
 </div>
 
@@ -114,126 +49,75 @@ button:disabled {
 <script>
 //<![CDATA[
 const translations = {
-    pt: {
-        notice: `<strong>Aviso Importante:</strong><br>Este gerador produz Braille normativo. Destina-se à impressão em embossers compatíveis.`,
-        labelUrl: "URL da postagem:",
-        placeholder: "Cole aqui a URL do seu post",
-        labelLang: "Idioma do conteúdo:",
-        button: "Gerar arquivo Braille",
-        btnLoading: "Traduzindo...",
-        btnReady: "Gerar arquivo Braille",
-        alertUrl: "Por favor, informe a URL da postagem.",
-        alertError: "Não foi possível acessar o conteúdo. Verifique se a URL está correta.",
-        alertEngine: "Motor Braille não carregado. Tente atualizar a página.",
-        filename: "documento_braille.brf"
-    },
-    en: {
-        notice: `<strong>Important Notice:</strong><br>This generator produces normative Braille. For use with compatible embossers.`,
-        labelUrl: "Post URL:",
-        placeholder: "Paste your post URL here",
-        labelLang: "Content language:",
-        button: "Generate Braille file",
-        btnLoading: "Translating...",
-        btnReady: "Generate Braille file",
-        alertUrl: "Please enter the post URL.",
-        alertError: "Unable to access content.",
-        alertEngine: "Braille engine not loaded.",
-        filename: "braille_document.brf"
-    }
-    // Adicione os outros idiomas (es, fr, de, it) seguindo o padrão acima...
+    pt: { notice: `<strong>Aviso Importante:</strong><br>Gerador de Braille normativo para análises da Compass Wealth.`, labelUrl: "URL da postagem:", placeholder: "Cole a URL aqui", labelLang: "Idioma:", button: "Gerar arquivo Braille", loading: "Carregando Motor...", processing: "Traduzindo...", error: "Erro ao processar conteúdo.", engineError: "Erro ao carregar tabelas." },
+    en: { notice: `<strong>Important Notice:</strong><br>Normative Braille generator for Compass Wealth analyses.`, labelUrl: "Post URL:", placeholder: "Paste URL here", labelLang: "Language:", button: "Generate Braille file", loading: "Loading Engine...", processing: "Translating...", error: "Error accessing content.", engineError: "Engine error." }
 };
 
-const noticeBox = document.getElementById("noticeBox");
-const labelUrl = document.getElementById("labelUrl");
-const urlInput = document.getElementById("urlInput");
-const labelLang = document.getElementById("labelLang");
-const generateBtn = document.getElementById("generateBtn");
-const langSelect = document.getElementById("lang");
-const statusDiv = document.getElementById("status");
+const tables = { pt: "pt-br.dis", en: "en-ueb-g2.ctb", es: "es.ctb", fr: "fr-g2.ctb", de: "de-g2.ctb", it: "it.ctb" };
 
 function updateLanguage(){
-    const lang = langSelect.value;
-    const t = translations[lang] || translations['pt'];
-    noticeBox.innerHTML = t.notice;
-    labelUrl.innerText = t.labelUrl;
-    urlInput.placeholder = t.placeholder;
-    labelLang.innerText = t.labelLang;
-    if(!generateBtn.disabled) generateBtn.innerText = t.button;
+    const lang = document.getElementById("lang").value;
+    const t = translations[lang] || translations['en'];
+    document.getElementById("noticeBox").innerHTML = t.notice;
+    document.getElementById("labelUrl").innerText = t.labelUrl;
+    document.getElementById("urlInput").placeholder = t.placeholder;
+    document.getElementById("labelLang").innerText = t.labelLang;
+    document.getElementById("generateBtn").innerText = t.button;
 }
 
-langSelect.addEventListener("change", updateLanguage);
+document.getElementById("lang").addEventListener("change", updateLanguage);
+updateLanguage();
 
-// Inicialização segura do LibLouis
-async function initBraille() {
-    try {
-        if (!window.liblouis) throw new Error("Script LibLouis não encontrado");
-        
-        // Carrega tabelas básicas
-        await liblouis.loadTable("pt-br.dis");
-        await liblouis.loadTable("en-ueb-g2.ctb");
-        
-        statusDiv.innerText = "Motor Braille Pronto";
-        statusDiv.style.color = "green";
-        generateBtn.disabled = false;
-        updateLanguage();
-    } catch (e) {
-        console.error(e);
-        statusDiv.innerText = "Erro ao carregar Motor Braille";
-        statusDiv.style.color = "red";
-    }
-}
+document.getElementById("generateBtn").onclick = async function(){
+    const btn = this;
+    const lang = document.getElementById("lang").value;
+    const t = translations[lang] || translations['en'];
+    const url = document.getElementById("urlInput").value.trim();
+    const log = document.getElementById("status-log");
 
-window.addEventListener("load", initBraille);
-
-generateBtn.onclick = async function(){
-    const lang = langSelect.value;
-    const t = translations[lang] || translations['pt'];
-    const url = urlInput.value.trim();
-
-    if(!url) return alert(t.alertUrl);
-    if(!window.liblouis || !liblouis.translateString) return alert(t.alertEngine);
+    if(!url) return alert(t.error);
 
     try {
-        generateBtn.disabled = true;
-        generateBtn.innerText = t.btnLoading;
-
-        const proxy = "https://api.allorigins.win/raw?url=";
-        const res = await fetch(proxy + encodeURIComponent(url));
-        if(!res.ok) throw new Error("CORS/Proxy Error");
+        btn.disabled = true;
         
+        // 1. Tenta carregar o motor e a tabela específica
+        log.innerText = t.loading;
+        await liblouis.loadTable(tables[lang]);
+        
+        // 2. Busca o conteúdo via Proxy
+        log.innerText = t.processing;
+        const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
         const html = await res.text();
         const doc = new DOMParser().parseFromString(html, "text/html");
         
-        // Seletores específicos para capturar conteúdo
-        const contentNode = doc.querySelector(".post-body") || 
-                            doc.querySelector("article") || 
-                            doc.querySelector(".entry-content") || 
-                            doc.body;
-
+        const contentNode = doc.querySelector(".post-body") || doc.querySelector("article") || doc.body;
         const content = contentNode.innerText.trim();
-        const tables = { pt:"pt-br.dis", en:"en-ueb-g2.ctb", es:"es.ctb", fr:"fr-g2.ctb", de:"de-g2.ctb", it:"it.ctb" };
 
+        // 3. Traduz
         const braille = await liblouis.translateString(tables[lang], content);
 
+        // 4. Download
         const blob = new Blob([braille], {type:"text/plain;charset=utf-8"});
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = t.filename;
+        a.download = "braille_compass_wealth.brf";
         a.click();
+        
+        log.innerText = "Concluído com sucesso";
+        log.style.color = "green";
     } catch (e) {
         console.error(e);
-        alert(t.alertError);
+        log.innerText = t.engineError;
+        log.style.color = "red";
+        alert(t.error);
     } finally {
-        generateBtn.disabled = false;
-        generateBtn.innerText = t.btnReady;
+        btn.disabled = false;
+        btn.innerText = t.button;
     }
 };
 
-// Captura URL automática via parâmetro
 const postUrl = new URLSearchParams(window.location.search).get("url");
-if(postUrl) urlInput.value = decodeURIComponent(postUrl);
-
-updateLanguage(); // Chamada inicial
+if(postUrl) document.getElementById("urlInput").value = decodeURIComponent(postUrl);
 //]]>
 </script>
 </body>
